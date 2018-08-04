@@ -330,7 +330,7 @@ namespace Neo.SmartContract
         {
             if (caller != entry && !Helpers.IsContractWhitelistedDEX(caller))
             {
-                from = caller;
+                originator = caller;
             }
 
             if (originator.Length != 20 || from.Length != 20 || to.Length != 20)

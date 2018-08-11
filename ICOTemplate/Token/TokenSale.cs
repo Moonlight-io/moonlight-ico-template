@@ -108,7 +108,8 @@ namespace Neo.SmartContract
                 refund(sender, neoRemainingAfterPurchase, gasRemainingAfterPurchase);
             }
 
-            BigInteger newTokenBalance = NEP5.BalanceOf(sender) + totalTokensPurchased;
+            BigInteger senderAmountSubjectToVesting = SubjectToVestingPeriod(sender);
+            BigInteger newTokenBalance = NEP5.BalanceOf(sender) + totalTokensPurchased + senderAmountSubjectToVesting;
 
             Helpers.SetBalanceOf(sender, newTokenBalance);
             Helpers.SetBalanceOfSaleContribution(sender, totalContributionBalance);

@@ -28,11 +28,6 @@ The Moonlight team is proud to provide a new ICO template for use by the NEO com
 * Partial refunds at hardcap
 * Vested project token allocation
 
-## Deployed
-A deployed example of this contract can be found on Neo Testnet at `0x75e1415ef806573cb792a02ace5c33300c9692d1`
-
-
-
 # Quickstart
 1. Ensure that you correctly set `InitialAdminAccount` to your own address
 2. [Build](http://docs.neo.org/en-us/sc/quickstart/getting-started-csharp.html) and [deploy](http://docs.neo.org/en-us/sc/quickstart/deploy-invoke.html) the contract with input params: `07`
@@ -46,7 +41,6 @@ A deployed example of this contract can be found on Neo Testnet at `0x75e1415ef8
     * **Note:** This is a latching method and cannot be undone
 5. Public method to ensure transparent use of `AllocatePresalePurchase`
     * `main("IsPresaleAllocationLocked", [])`
-
 
 # Wallet Integration
 - Check if a user has been whitelisted

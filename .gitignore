@@ -1,5 +1,7 @@
-ICOTemplate/bin
-ICOTemplate/obj
-packages
 .vs
-.DS_Store
+node_modules
+packages
+keys.env
+.idea
+package-lock.json
+*.swp

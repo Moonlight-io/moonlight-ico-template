@@ -98,7 +98,7 @@ namespace Neo.SmartContract
                 // transfer tokens from one address to another
                 if (!Helpers.RequireArgumentLength(args, 4))
                 {
-                    // TransferFrom() requires 4 arguments: originator, from, to, amount
+                    // TransferFrom() requires 4 arguments: spender, from, to, amount
                     return false;
                 }
 
@@ -110,7 +110,7 @@ namespace Neo.SmartContract
                 // approve a third party to transfer tokens from one address to another
                 if (!Helpers.RequireArgumentLength(args, 3))
                 {
-                    // Approve() requires 3 arguments: originator, to, amount
+                    // Approve() requires 3 arguments: from, spender, amount
                     return false;
                 }
 
@@ -146,18 +146,18 @@ namespace Neo.SmartContract
         ///  return the amount of tokens that the "to" account can transfer from the "from" acount.
         /// </summary>
         /// <param name="from"></param>
-        /// <param name="to"></param>
+        /// <param name="spender"></param>
         /// <returns></returns>
-        public static BigInteger Allowance(byte[] from, byte[] to)
+        public static BigInteger Allowance(byte[] from, byte[] spender)
         {
-            if (from.Length != 20 || to.Length != 20)
+            if (from.Length != 20 || spender.Length != 20)
             {
                 Runtime.Log("Allowance() invalid from|to address supplied");
                 return 0;
             }
 
             StorageMap allowances = Storage.CurrentContext.CreateMap(StorageKeys.TransferAllowancePrefix());
-            return allowances.Get(from.Concat(to)).AsBigInteger();
+            return allowances.Get(from.Concat(spender)).AsBigInteger();
         }
 
         /// <summary>
@@ -171,42 +171,42 @@ namespace Neo.SmartContract
         }
 
         /// <summary>
-        /// approve the "to" account to transfer "approvedValue" tokens from the originator acount.
+        /// approve the "spender" account to transfer "approvedValue" tokens from the "from" acount.
         /// </summary>
-        /// <param name="originator"></param>
-        /// <param name="to"></param>
+        /// <param name="from"></param>
+        /// <param name="spender"></param>
         /// <param name="amount"></param>
         /// <param name="caller"></param>
         /// <param name="entry"></param>
         /// <returns></returns>
-        public static bool Approve(byte[] originator, byte[] to, BigInteger amount, byte[] caller, byte[] entry)
+        public static bool Approve(byte[] from, byte[] spender, BigInteger amount, byte[] caller, byte[] entry)
         {
             if (caller != entry && !Helpers.IsContractWhitelistedDEX(caller))
             {
-                originator = caller;
+                from = caller;
             }
 
-            if (amount < 0 || originator == to)
+            if (amount < 0 || from == spender)
             {
                 // don't accept a meaningless value
                 Runtime.Log("Approve() invalid transfer amount or from==to");
                 return false;
             }
 
-            if (originator.Length != 20 || to.Length != 20)
+            if (from.Length != 20 || spender.Length != 20)
             {
-                Runtime.Log("Approve() (to|originator).Length != 20");
+                Runtime.Log("Approve() (from|spender).Length != 20");
                 return false;
             }
 
-            if (!Runtime.CheckWitness(originator))
+            if (!Runtime.CheckWitness(from))
             {
                 // ensure transaction is signed properly by the owner of the tokens
                 Runtime.Log("Approve() CheckWitness failed");
                 return false;
             }
 
-            BigInteger fromBalance = BalanceOf(originator);                   // retrieve balance of originating account
+            BigInteger fromBalance = BalanceOf(from);                   // retrieve balance of originating account
             if (fromBalance < amount)
             {
                 Runtime.Log("Approve() fromBalance < approveValue");
@@ -214,8 +214,7 @@ namespace Neo.SmartContract
                 return false;
             }
 
-            Helpers.SetAllowanceAmount(originator.Concat(to), amount);
-            //OnApprove(originator, to, amount)
+            Helpers.SetAllowanceAmount(from.Concat(spender), amount);
             return true;
         }
 
@@ -317,25 +316,25 @@ namespace Neo.SmartContract
         }
 
         /// <summary>
-        /// transfer an amount from the "from" account to the "to" acount if the originator has been approved to transfer the requested amount.
+        /// transfer an amount from the "from" account to the "to" acount if the "spender" has been approved to transfer the requested amount.
         /// </summary>
-        /// <param name="originator"></param>
+        /// <param name="spender"></param>
         /// <param name="from"></param>
         /// <param name="to"></param>
         /// <param name="amount"></param>
         /// <param name="caller"></param>
         /// <param name="entry"></param>
         /// <returns></returns>
-        public static bool TransferFrom(byte[] originator, byte[] from, byte[] to, BigInteger amount, byte[] caller, byte[] entry)
+        public static bool TransferFrom(byte[] spender, byte[] from, byte[] to, BigInteger amount, byte[] caller, byte[] entry)
         {
             if (caller != entry && !Helpers.IsContractWhitelistedDEX(caller))
             {
-                originator = caller;
+                spender = caller;
             }
 
-            if (originator.Length != 20 || from.Length != 20 || to.Length != 20)
+            if (spender.Length != 20 || from.Length != 20 || to.Length != 20)
             {
-                Runtime.Log("TransferFrom() (originator|from|to).Length != 20");
+                Runtime.Log("TransferFrom() (spender|from|to).Length != 20");
                 return false;
             }
 
@@ -345,7 +344,7 @@ namespace Neo.SmartContract
                 throw new Exception();
             }
 
-            BigInteger approvedTransferAmount = Allowance(from, to);    // how many tokens is this address authorised to transfer
+            BigInteger approvedTransferAmount = Allowance(from, spender);    // how many tokens is this address authorised to transfer
             BigInteger fromBalance = BalanceOf(from);                   // retrieve balance of authorised account
 
             if (approvedTransferAmount < amount || fromBalance < amount)
@@ -355,7 +354,9 @@ namespace Neo.SmartContract
                 return false;
             }
 
-            if (amount == 0 || from == to)
+            BigInteger senderAmountSubjectToVesting = TokenSale.SubjectToVestingPeriod(from);
+
+            if (amount == 0 || from == to || fromBalance - senderAmountSubjectToVesting < amount)
             {
                 // don't accept a meaningless value
                 Runtime.Log("TransferFrom() empty transfer amount or from==to");
@@ -363,21 +364,20 @@ namespace Neo.SmartContract
                 return true;    // as per nep5 standard - return true when amount is 0 or from == to
             }
 
-            if (!Runtime.CheckWitness(originator))
+            if (!Runtime.CheckWitness(spender))
             {
-                // ensure transaction is signed properly by the request originator
+                // ensure transaction is signed properly by the spender
                 Runtime.Log("TransferFrom() CheckWitness failed");
                 return false;
             }
 
             BigInteger recipientBalance = BalanceOf(to);
             BigInteger recipientAmountSubjectToVesting = TokenSale.SubjectToVestingPeriod(to);
-            BigInteger senderAmountSubjectToVesting = TokenSale.SubjectToVestingPeriod(from);
 
             BigInteger newBalance = fromBalance - amount;
             Helpers.SetBalanceOf(from, newBalance + senderAmountSubjectToVesting);                  // remove balance from originating account
             Helpers.SetBalanceOf(to, recipientBalance + recipientAmountSubjectToVesting + amount);  // set new balance for destination account
-            Helpers.SetAllowanceAmount(from.Concat(originator), approvedTransferAmount - amount);   // deduct transferred amount from allowance
+            Helpers.SetAllowanceAmount(from.Concat(spender), approvedTransferAmount - amount);   // deduct transferred amount from allowance
 
             transfer(from, to, amount);
             return true;

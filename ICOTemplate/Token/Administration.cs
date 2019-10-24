@@ -126,7 +126,7 @@ namespace Neo.SmartContract
         public static bool ContractMigrate(object[] args)
         {
             // Contract Migrate(byte[] script, byte[] parameter_list, byte return_type, bool need_storage, string name, string version, string author, string email, string description)
-            Contract.Migrate((byte[])args[1], (byte[])args[2], (byte)args[3], (bool)args[4], (string)args[5], (string)args[6], (string)args[7], (string)args[8], (string)args[9]);
+            Contract.Migrate((byte[])args[1], (byte[])args[2], (byte)args[3], (ContractPropertyState)args[4], (string)args[5], (string)args[6], (string)args[7], (string)args[8], (string)args[9]);
             return true;
         }
 

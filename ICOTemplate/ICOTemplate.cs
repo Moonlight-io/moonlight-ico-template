@@ -16,12 +16,12 @@ namespace Neo.SmartContract
         /// <summary>
         /// this is the initial admin account responsible for initialising the contract (reversed byte array of contract address)
         /// </summary>
-        public static readonly byte[] InitialAdminAccount = { 187, 253, 4, 207, 138, 221, 236, 148, 199, 120, 122, 82, 106, 111, 132, 32, 83, 22, 121, 162 };
+        public static readonly byte[] InitialAdminAccount = { 100, 160, 44, 55, 242, 105, 87, 175, 125, 97, 75, 228, 143, 76, 167, 75, 245, 65, 162, 123 };
 
         /// <summary>
         /// project token allocation will be assigned here and subject to vesting criteria defined in the whitepaper (see below for details)
         /// </summary>
-        public static byte[] MoonlightProjectKey() => new byte[] { 117, 193, 54, 170, 8, 227, 61, 189, 23, 2, 129, 242, 221, 54, 158, 202, 150, 10, 226, 29 };
+        public static byte[] MoonlightProjectKey() => new byte[] { 124, 126, 46, 158, 164, 73, 102, 110, 177, 73, 54, 125, 123, 109, 137, 234, 83, 108, 79, 40 };
 
         /// <summary>
         /// founder tokens will be assigned to the following addresses and are subject to different token vesting rules (see below for details)
@@ -144,20 +144,6 @@ namespace Neo.SmartContract
         {
             if (Runtime.Trigger == TriggerType.Application)
             {
-                if (operation == "admin" && Helpers.VerifyIsAdminAccount())
-                {
-                    // allow access to administration methods
-                    string adminOperation = (string)args[0];
-                    foreach (string adminMethod in Administration.GetAdministrationMethods())
-                    {
-                        if (adminMethod == adminOperation)
-                        {
-                            return Administration.HandleAdministrationOperation(adminOperation, args);
-                        }
-                    }
-                    return false;
-                }
-
                 // test if a nep5 method is being invoked
                 foreach (string nepMethod in NEP5.GetNEP5Methods())
                 {
@@ -183,6 +169,20 @@ namespace Neo.SmartContract
                     {
                         return Helpers.HandleHelperOperation(operation, args);
                     }
+                }
+
+                if (operation == "admin" && Helpers.VerifyIsAdminAccount())
+                {
+                    // allow access to administration methods
+                    string adminOperation = (string)args[0];
+                    foreach (string adminMethod in Administration.GetAdministrationMethods())
+                    {
+                        if (adminMethod == adminOperation)
+                        {
+                            return Administration.HandleAdministrationOperation(adminOperation, args);
+                        }
+                    }
+                    return false;
                 }
             }
             else if (Runtime.Trigger == TriggerType.Verification)
